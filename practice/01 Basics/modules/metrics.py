@@ -74,7 +74,17 @@ def DTW_distance(ts1, ts2, r=None):
     """
 
     dtw_dist = 0
+    N, M = sum(ts1.shape), sum(ts2.shape)
+    dist_mat=np.zeros((N,M))
+    for i in range(N):
+      for j in range(M):
+        dist_mat[i,j] = ED_distance(ts1[i], ts2[j])
 
-    # INSERT YOUR CODE
+    N,M=dist_mat.shape
+    D_mat = np.zeros((N+1,M+1))
+    for i in range(1,N+1):
+        D_mat[i,0]=np.inf
+    for i in range(1,M+1):
+        D_mat[0,i]=np.inf
 
-    return dtw_dist
+    return dist_mat, D_mat
