@@ -78,7 +78,7 @@ def DTW_distance(ts1, ts2, r=None):
     dist_mat=np.zeros((N,M))
     for i in range(N):
       for j in range(M):
-        dist_mat[i,j] = ED_distance(ts1[i], ts2[j])
+        dist_mat[i,j] = (ts1[i]- ts2[j])**2
 
     N,M=dist_mat.shape
     D_mat = np.zeros((N+1,M+1))
@@ -87,4 +87,7 @@ def DTW_distance(ts1, ts2, r=None):
     for i in range(1,M+1):
         D_mat[0,i]=np.inf
 
-    return dist_mat, D_mat
+    for i in range(1,N+1):
+      for j in range(1,M+1):
+        D_mat[i][j] = dist_mat[i-1][j-1]+min(D_mat[i-1][j],D_mat[i,j-1],D_mat[i-1][j-1])
+    return  D_mat[N][M]
