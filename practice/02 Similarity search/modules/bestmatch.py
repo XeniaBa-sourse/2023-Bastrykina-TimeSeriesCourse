@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 
-
 from modules.utils import *
 from modules.metrics import *
 
@@ -128,10 +127,8 @@ class NaiveBestMatchFinder(BestMatchFinder):
     """
     Naive Best Match Finder.
     """
-    
     def __init__(self, ts=None, query=None, exclusion_zone=1, top_k=3, normalize=True, r=0.05):
         super().__init__(ts, query, exclusion_zone, top_k, normalize, r)
-
 
     def perform(self):
         """
@@ -150,28 +147,12 @@ class NaiveBestMatchFinder(BestMatchFinder):
             excl_zone = 0
         else:
             excl_zone = int(np.ceil(m / self.excl_zone_denom))
-        
-        #best_match_results = {}
-        dist_list = []
-        query_data = z_normalize(self.query)
-        for i in range(N-m+1):
-          query_subsequence = self.ts_data[i]
-          query_subsequence = z_normalize(query_subsequence)
-          dist= DTW_distance(query_subsequence, query_data)
+ 
+        distance = [DTW_distance(self.ts_data[i], self.query) for i in range(N)]
 
-
-
-          if dist < bsf:
-            bsf = dist
-            dist_list.append(dist)
-            #best_match_results['distance'] = dist
-            #best_match_results['index'] = i
-            self.bestmatch = super()._top_k_match(dist_list, m, bsf, excl_zone )
-          else:
-            dist = np.inf
-            dist_list.append(dist)
+        self.bestmatch = self._top_k_match(distance, m, bsf, excl_zone)
+              
         return self.bestmatch
-
 
 class UCR_DTW(BestMatchFinder):
     """
@@ -200,12 +181,14 @@ class UCR_DTW(BestMatchFinder):
             LB_Kim lower bound.
         """
 
+        if len(subs1) != len(subs2):
+          raise ValueError("Подпоследовательности должны иметь одинаковую длину.")
+    
         lb_Kim = 0
-
-        # INSERT YOUR CODE
+    
+        lb_Kim = np.sqrt((subs1[0] - subs2[0])**2) + np.sqrt((subs1[-1] - subs2[-1])**2)
         
         return lb_Kim
-
 
     def _LB_Keogh(self, subs1, subs2, r):
         """
@@ -230,9 +213,22 @@ class UCR_DTW(BestMatchFinder):
         
         lb_Keogh = 0
 
-        # INSERT YOUR CODE
+        if len(subs1) != len(subs2):
+          raise ValueError("Подпоследовательности должны иметь одинаковую длину.")
+    
+        res = []
+        for i in range(len(subs1)):
+            if subs2[i] > max(subs1[max(0, i-r):min(len(subs1), i+r+1)]):
+                res.append((subs2[i] - max(subs1[max(0, i-r):min(len(subs1), i+r+1)]))**2)
+            elif subs2[i] < min(subs1[max(0, i-r):min(len(subs1), i+r+1)]):
+                res.append((subs2[i] - min(subs1[max(0, i-r):min(len(subs1), i+r+1)]))**2)
+            else:
+                res.append(0)
+        
+        lb_Keogh = sum(res)
 
         return lb_Keogh
+
 
 
     def perform(self):
@@ -257,8 +253,32 @@ class UCR_DTW(BestMatchFinder):
         self.lb_KeoghQC_num = 0
         self.lb_KeoghCQ_num = 0
         
-        # INSERT YOUR CODE
+        distances = []
         
+        for subseq_idx in range(N):
+            subseq = self.ts_data[subseq_idx]
+            
+            if self.normalize:
+                subseq = z_normalize(subseq)
+                self.query = z_normalize(self.query)
+
+            if self._LB_Kim(self.query, subseq) > bsf:
+                self.lb_Kim_num += 1
+
+            elif self._LB_Keogh(self.query, subseq, int(self.r*m)) > bsf:
+                self.lb_KeoghQC_num += 1
+
+            elif self._LB_Keogh(subseq, self.query, int(self.r*m)) > bsf:
+                self.lb_KeoghCQ_num += 1
+
+            else:
+              dist = DTW_distance(self.query, subseq, self.r)
+              distances.append(dist)
+              if dist < bsf:
+                  bsf = dist
+
+
+        self.bestmatch = self._top_k_match(distances, m, bsf, excl_zone)
 
         return {'index' : self.bestmatch['index'],
                 'distance' : self.bestmatch['distance'],
