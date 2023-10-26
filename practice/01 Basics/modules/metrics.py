@@ -18,14 +18,22 @@ def ED_distance(ts1, ts2):
     ed_dist : float
         Euclidean distance between ts1 and ts2.
     """
-    square=np.square(ts1-ts2)
-    sum_sqr=np.sum(square)
-    ed_dist = np.sqrt(sum_sqr)
-
-
     
-    return ed_dist
+    ed_dist = 0
 
+    if len(ts1) != len(ts2):
+      return -1
+    
+    for i,j in zip(ts1, ts2):
+      ed_dist += (i-j)**2
+    return ed_dist**(0.5)
+
+
+def standard_deviation(ts, mu):
+  sum = 0
+  for t in ts:
+    sum += t**2 - mu**2
+  return (sum/len(ts))**0.5
 
 def norm_ED_distance(ts1, ts2):
     """
@@ -45,18 +53,13 @@ def norm_ED_distance(ts1, ts2):
         The normalized Euclidean distance between ts1 and ts2.
     """
 
-    norm_ed_dist = 0
+    n = len(ts1)
+    mu1 = 1/n * sum(ts1)
+    mu2 = 1/n * sum(ts2)
+    sigma1 = standard_deviation(ts1, mu1)
+    sigma2 = standard_deviation(ts2, mu2)
+    norm_ed_dist = (abs(2*n*(1-(np.dot(ts1,ts2)-n*mu1*mu2)/(n*sigma1*sigma2))))**0.5 
 
-    avg_ts1 = np.mean(ts1)
-    avg_ts2 = np.mean(ts2)
-
-    std_ts1 = np.std(ts1)
-    std_ts2 = np.std(ts2)
-
-    T1T2 = ts1.dot(ts2)
-    drob = (T1T2-avg_ts1*avg_ts2*len(ts1))/(std_ts1*std_ts2*len(ts1))
-
-    norm_ed_dist = abs(2*len(ts1)*(1-drob))**0.5
     return norm_ed_dist
 
 
@@ -81,21 +84,20 @@ def DTW_distance(ts1, ts2, r=None):
         DTW distance between ts1 and ts2.
     """
 
-    dtw_dist = 0
-    N, M = sum(ts1.shape), sum(ts2.shape)
-    dist_mat=np.zeros((N,M))
-    for i in range(N):
-      for j in range(M):
-        dist_mat[i,j] = (ts1[i]- ts2[j])**2
+    m = len(ts1)
+    DTW = np.zeros((m + 1, m + 1))
+    DTW[:, :] = float('Inf')
+    DTW[0, 0] = 0
 
-    N,M=dist_mat.shape
-    D_mat = np.zeros((N+1,M+1))
-    for i in range(1,N+1):
-        D_mat[i,0]=np.inf
-    for i in range(1,M+1):
-        D_mat[0,i]=np.inf
+    if r == None:
+        for i in range(1, m + 1):
+            for j in range(1, m + 1):
+                cost = (ts1[i-1] - ts2[j-1])**2
+                DTW[i, j] = cost + min(DTW[i-1, j], DTW[i-1, j-1], DTW[i, j-1])
+    else:
+        for i in range(1, m + 1):
+            for j in range(max(1, i - int(np.floor(m * r))), min(m, i + int(np.floor(m * r))) + 1):
+                cost = (ts1[i-1] - ts2[j-1])**2
+                DTW[i, j] = cost + min(DTW[i-1, j], DTW[i-1, j-1], DTW[i, j-1])
 
-    for i in range(1,N+1):
-      for j in range(1,M+1):
-        D_mat[i][j] = dist_mat[i-1][j-1]+min(D_mat[i-1][j],D_mat[i,j-1],D_mat[i-1][j-1])
-    return  D_mat[N][M]
+    return DTW[m, m]
