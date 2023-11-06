@@ -4,7 +4,7 @@ import math
 
 import stumpy
 from stumpy import config
-
+from stumpy import core
 
 def compute_mp(ts1, m, exclusion_zone=None, ts2=None):
     """
@@ -31,12 +31,12 @@ def compute_mp(ts1, m, exclusion_zone=None, ts2=None):
         (matrix profile, matrix profile index, subsequence length, 
         exclusion zone, the first and second time series).
     """
+    mp = stumpy.stump(ts1, m, ts2)
     
-    # INSERT YOUR CODE
-
     return {'mp': mp[:, 0],
             'mpi': mp[:, 1],
             'm' : m,
             'excl_zone': exclusion_zone,
-            'data': {'ts1' : ts1, 'ts2' : ts2}
+            'data': {'ts1' : ts1, 'ts2' : ts2},
+            'indices': {'left' : mp[:,-2], 'right' : mp[:,-1]}
             }
