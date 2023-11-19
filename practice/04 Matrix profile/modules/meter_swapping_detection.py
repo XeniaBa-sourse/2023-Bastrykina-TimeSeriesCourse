@@ -7,6 +7,7 @@ from plotly.offline import init_notebook_mode
 import plotly.graph_objs as go
 import plotly.express as px
 plotly.offline.init_notebook_mode(connected=True)
+import pandas as pd
 
 from modules.mp import *
 
@@ -71,8 +72,29 @@ def meter_swapping_detection(heads, tails, house_idx, m):
 
     min_score = {}
 
-    # INSERT YOUR CODE
-    
+    T = len(heads.keys())
+    combin = []
+
+    for k in range(1,T+1):
+      for i in range(1,T**2+1):
+        h_keys = list(heads.keys())[(i-1)%T]
+        t_keys = list(tails.keys())[(i-1 // T + (k-1)) % T]
+        h_series = heads[h_keys]
+        t_series = tails[t_keys]
+        Hi = pd.concat([h_series,t_series])
+        combin.append(Hi)
+    for i in range(len(combin)):
+      print(combin[i])
+
+    min_dis = np.inf
+
+    for i in range(len(combin)):
+      for j in range (i+1, len(combin)):
+        print(i, '\n',j)
+        mp = compute_mp(combin[i], m, combin[j])
+        min_mp = min(mp['mp'])
+        min_score = (min_mp)/(min_mp+eps)
+
     return min_score
 
 
